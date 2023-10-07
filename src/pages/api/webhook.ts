@@ -1,5 +1,5 @@
-import { api } from "@/utils/api";
-import { clerkClient, type WebhookEvent } from "@clerk/nextjs/server";
+import { db } from "@/server/db";
+import { type UserJSON, type WebhookEvent } from "@clerk/nextjs/server";
 import type { IncomingHttpHeaders } from "http";
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { WebhookRequiredHeaders } from "svix";
@@ -24,27 +24,26 @@ export default async function handler(
     // If the verification fails, return a 400 error
     return res.status(400).json({});
   }
-  const { id } = evt.data;
+  const { email_addresses, id, image_url: imageUrl } = evt.data as UserJSON;
 
   const eventType = evt.type;
   if (eventType === "user.created") {
-    const user = await clerkClient.users.getUser(id ?? "");
-
-    const email = user.emailAddresses[0]?.emailAddress;
-    const username = user.username;
-
-    const mutation = api.users.create.useMutation();
-
-    if (id && email && username) {
-      await mutation.mutateAsync({
-        id,
-        email: user.emailAddresses[0]?.emailAddress ?? "",
-        username: user.username,
+    try {
+      await db.user.create({
+        data: {
+          email: email_addresses[0]?.email_address,
+          id: id,
+          imageUrl,
+        },
       });
+    } catch (err) {
+      if (err instanceof Error) {
+        return res.status(500).json({ error: err.message });
+      }
     }
-
-    res.status(201).json({ success: true, message: "User created" });
   }
+
+  res.status(201).json({ success: true, message: "User created" });
 }
 
 type NextApiRequestWithSvixRequiredHeaders = NextApiRequest & {
