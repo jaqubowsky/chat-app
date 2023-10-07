@@ -1,0 +1,49 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "sqlite"
+    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        String   @id
+    email     String?  @unique
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    username  String?
+    image     String?
+
+    messages Message[]
+    chats    Chat[]
+}
+
+model Message {
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    body      String
+    Chat      Chat?    @relation(fields: [chatId], references: [id])
+    chatId    Int?
+    author    User?    @relation(fields: [authorId], references: [id])
+    authorId  String?
+
+    @@index([chatId])
+    @@index([authorId])
+}
+
+model Chat {
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    name      String
+
+    messages Message[]
+    author   User?     @relation(fields: [authorId], references: [id])
+    authorId String?
+}
